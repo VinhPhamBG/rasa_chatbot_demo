@@ -25,3 +25,14 @@ stories:
   - action: action_show_transfer_charge
   - intent: affirm
   - action: utter_ok
+
+- story: User interrupts the form and doesn't want to continue
+  steps:
+  - intent: transfer_money
+  - action: transfer_money_form
+  - active_loop: transfer_money_form
+  - intent: deny
+  - action: utter_ask_continue
+  - intent: deny
+  - action: action_deactivate_loop
+  - active_loop: null

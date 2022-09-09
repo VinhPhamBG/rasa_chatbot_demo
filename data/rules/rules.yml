@@ -71,6 +71,7 @@ rules:
   - action: transfer_money_form
   - active_loop: transfer_money_form
   
+  
 - rule: Activate transaction_search_form when no other form is active
   condition:
   # this condition allows stories to handle form switching
