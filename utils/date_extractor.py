@@ -1,18 +1,20 @@
 import calendar
+import datetime
 import json
 import string
 import time
-import datetime
-import regex as re
+from ast import Break
+
 import pytz
-
-
+import regex as re
 
 REGEX_DATE = r"(3[01]|[12][0-9]|0?[1-9])[-\/:.|](1[0-2]|0?[1-9])([-\/:|.](2[0-1][0-9][0-9]))"
 REGEX_DAY_MONTH = r"(3[01]|[12][0-9]|0?[1-9])[-\/:|.](1[0-2]|0?[1-9])"
 REGEX_MONTH_YEAR = r"(1[0-2]|0?[1-9])([-\/:|.](2[0-1][0-9][0-9]))"
-number_str = { "mùng một" : 1,"một": 1, "mùng hai": 2, "hai": 2, "mùng ba": 3, "ba": 3, "mùng bốn": 4, "bốn": 4,"tư": 4, "mùng năm": 5, "năm": 5, "mùng sáu": 6, "sáu": 6, "mùng bảy": 7, "bảy": 7, "mùng tám": 8, "tám": 8, "mùng chín": 9, "chín": 9,"mùng mười": 10, "mười": 10,"mười một": 11,"mười hai": 12,"mười ba": 13,"mười bốn": 14,"rằm": 15, "mười lăm": 15,"mười sáu": 16,"mười bảy": 17,"mười tám": 18,"mười chín": 19,
-    "hai mươi": 20,"hai mươi mốt": 21, "hai mốt": 21, "hai mươi hai": 22, "hai hai": 22, "hai mươi ba": 23, "hai ba": 23, "hai mươi bốn": 24, "hai bốn": 24, "hai tư": 24, "hai mươi tư": 24,"hai mươi lăm": 25, "hai lăm": 24, "hai mươi sáu": 26, "hai sáu": 26,"hai mươi bảy": 27, "hai bảy": 27,"hai mươi tám": 28, "hai tám": 28,"hai mươi chín": 29, "hai chín": 29,"ba mươi": 30,"ba mươi mốt": 31, "ba mốt": 31}
+
+with open("utils/number_str.json",encoding='utf-8') as f:
+        number_str = json.load(f)
+
 
 def regex_date(msg, timezone="Asia/Ho_Chi_Minh"):
     tz = pytz.timezone(timezone)
@@ -35,6 +37,7 @@ def regex_date(msg, timezone="Asia/Ho_Chi_Minh"):
             if 0 < int(pos1) < 32 and 0 < int(pos2) < 13:
                 _dt = pos1+"-"+pos2+"-"+str(now.year)
         date_str.append(_dt)
+    print(date_str)
     return date_str
 
 def preprocess_msg(msg):
@@ -62,8 +65,7 @@ def tokenize(msg):
         data = json.load(jsonFile)
     tokens = []
     n_grams = (10,9,8,7,6,5,4,3,2,1)
-    i = 0
-    #words.append(words.pop(words.index("đến")))      
+    i = 0      
     while i < len(words):
         has_gram = False
         token = None
@@ -100,6 +102,22 @@ def tokenize(msg):
                 tokens.append({data[token]:token})
                 #remove_token(words,token)
                 continue
+            if data[token] == "end":
+                if words[i] in ["năm", "tháng"]:
+                    tokens.append({data[token]:token})
+                elif words[i].isnumeric():
+                    tokens.append({data[token]:token})
+                    tokens.append({"year":words[i]})
+                #remove_token(words,token)
+                continue
+            if data[token] == "start":
+                if words[i] in ["năm", "tháng"]:
+                    tokens.append({data[token]:token})
+                elif words[i].isnumeric():
+                    tokens.append({data[token]:token})
+                    tokens.append({"year":words[i]})
+                #remove_token(words,token)
+                continue
             if data[token] in ["nextyear", "lastyear", "thisyear", "lastmonth", "thismonth", "nextmonth", "aftertomorrow"]:
                 tokens.append({data[token]:token})
                 remove_token(words,token)
@@ -107,8 +125,8 @@ def tokenize(msg):
             if data[token] == "year":
                 if words[i - 1] not in ["tháng", "ngày"]:
                     tokens.append({data[token]: words[i]})
-                    remove_token(words,token)
-                    remove_token(words,words[i - 1])
+                    remove_token(words,token) 
+                    words.remove(words[i - 1])               
                     continue
                 else:
                     continue
@@ -126,8 +144,7 @@ def tokenize(msg):
                     elif temp in number_str.keys():
                         tokens.append({data[token]: str(number_str[temp])}) 
                         remove_token(words,token)
-                        continue
-                        
+                        continue 
                     else:
                         tokens.append({data[token]: str(number_str[words[i]])})
                         remove_token(words,token)
@@ -135,33 +152,9 @@ def tokenize(msg):
             if data[token] == "nextyear":
                 tokens.append({data[token]:token})  
                 continue  
+    print(tokens)
     return tokens
 
-def tokenize_2(msg,file):
-    words = preprocess_msg(msg)
-    with open(file, encoding='utf-8') as jsonFile:
-        data = json.load(jsonFile)
-    tokens = []
-    n_grams = (8, 7, 6, 5, 4, 3, 2, 1)
-    i = 0
-    while i < len(words):
-        has_gram = False
-        token = None
-        for n_gram in n_grams:
-            token = ' '.join(words[i:i + n_gram])
-            if token in data:
-                w = words[i - 1] if i > 0 else ''
-                W = words[i + n_gram] if i < len(words) - n_gram else ''
-                i += n_gram
-                has_gram = True
-                break
-        if has_gram is False:
-            token = words[i]
-            i += 1
-        if token in data:
-            tokens.append({data[token]: token})
-
-    return tokens
 def get_weekday(day):
     days  = ["mon","tue","wed","thu","fri","sat","sun"]
     return days.index(day) + 1
@@ -188,7 +181,8 @@ def get_next_n_weekends_dates(date_time, weekday, n):
 def get_date(tokens,timezone,dates = []):
     tz = pytz.timezone(timezone)
     now = datetime.datetime.now(tz=tz).date()
-    for i in range(len(tokens)):
+    i = 0
+    while i < len(tokens):
         tok_key = list(tokens[i].keys())[0]
         tok_value = list(tokens[i].values())[0]
         if tok_key == 'today':
@@ -213,53 +207,142 @@ def get_date(tokens,timezone,dates = []):
             else:
                 date = (now + datetime.timedelta(days=(-1))).strftime("%d-%m-%Y")
                 dates.append(date)
-        if tok_key == 'nextweek':
-            if tok_value.split()[0].isnumeric():
-                num_weeks = int(tok_value.split()[0])
-                for day in tokens:
-                    token_day = list(day.keys())[0]
-                    if token_day in ['mon','tue','wed','thu','fri','sat','sun']:
-                        day_w = now.isoweekday()
-                        target_w = get_weekday(token_day)
-                        if day_w >= target_w:
-                            date = get_next_n_weekends_dates(now, token_day, num_weeks)
-                            date = date[num_weeks-1].strftime("%d-%m-%Y")
-                            dates.append(date)
-                        else:
-                            date = get_next_n_weekends_dates(now, token_day, num_weeks+1)
-                            date = date[num_weeks].strftime("%d-%m-%Y")
-                            dates.append(date)
+                
+        # if tok_key == 'nextweek':
+        #     if list(tokens[i - 1].keys())[0] in ['mon','tue','wed','thu','fri','sat','sun']:
+        #         for day in tokens:
+        #             token_day = list(day.keys())[0]
+        #             if token_day in ['mon','tue','wed','thu','fri','sat','sun']:
+        #                 day_w = now.isoweekday()
+        #                 target_w = get_weekday(token_day)
+        #                 if day_w >= target_w:
+        #                     date = get_next_n_weekends_dates(now, token_day,1)
+        #                     date = date[0].strftime("%d-%m-%Y")
+        #                     dates.append(date)
+        #                 else:
+        #                     date = get_next_n_weekends_dates(now, token_day, 2)
+        #                     date = date[1].strftime("%d-%m-%Y")
+        #                     dates.append(date)
+        #     else:
+        #         startdate = now + datetime.timedelta(days=-now.weekday(), weeks=1)
+        #         dates.append(startdate.strftime("%d-%m-%Y"))
+        #         for n in range(1,7):
+        #             day = (startdate + datetime.timedelta(days=(n))).strftime("%d-%m-%Y")
+        #             dates.append(day)
+
+        # if tok_key == 'lastweek':
+        #     if list(tokens[i - 1].keys())[0] in ['mon','tue','wed','thu','fri','sat','sun']:
+        #         for day in tokens:
+        #             token_day = list(day.keys())[0]
+        #             if token_day in ['mon','tue','wed','thu','fri','sat','sun']:
+        #                 day_w = now.isoweekday()
+        #                 target_w = get_weekday(token_day)
+        #                 if day_w >= target_w:
+        #                     date = get_next_n_weekends_dates(now, token_day,1)
+        #                     date = date[0].strftime("%d-%m-%Y")
+        #                     dates.append(date)
+        #                 else:
+        #                     date = get_next_n_weekends_dates(now, token_day, 2)
+        #                     date = date[1].strftime("%d-%m-%Y")
+        #                     dates.append(date)
+        #     else:
+        #         startdate = now + datetime.timedelta(days=-now.weekday(), weeks=-1)
+        #         dates.append(startdate.strftime("%d-%m-%Y"))
+        #         for n in range(1,7):
+        #             day = (startdate + datetime.timedelta(days=(n))).strftime("%d-%m-%Y")
+        #             dates.append(day)
+        
+        if tok_key == 'lastweek':
+            temp = []
+            startdate = now - datetime.timedelta(days=now.weekday() + 7)
+            temp.append(startdate.strftime("%d-%m-%Y"))
+            for n in range(1,7):
+                day = (startdate + datetime.timedelta(days=(n))).strftime("%d-%m-%Y")
+                temp.append(day)
+            weekdays = ['mon','tue','wed','thu','fri','sat','sun']
+            prev_key = list(tokens[i - 1].keys())[0]
+            if prev_key in weekdays:
+                if prev_key == "mon":
+                    dates.append(temp[0])
+                elif prev_key == "tue":
+                    dates.append(temp[1])
+                elif prev_key == "wed":
+                    dates.append(temp[2])
+                elif prev_key == "thu":
+                    dates.append(temp[3])
+                elif prev_key == "fri":
+                    dates.append(temp[4])
+                elif prev_key == "sat":
+                    dates.append(temp[5])
+                elif prev_key == "sun":
+                    dates.append(temp[6])
             else:
-                for day in tokens:
-                    token_day = list(day.keys())[0]
-                    if token_day in ['mon','tue','wed','thu','fri','sat','sun']:
-                        day_w = now.isoweekday()
-                        target_w = get_weekday(token_day)
-                        if day_w >= target_w:
-                            date = get_next_n_weekends_dates(now, token_day,1)
-                            date = date[0].strftime("%d-%m-%Y")
-                            dates.append(date)
-                        else:
-                            date = get_next_n_weekends_dates(now, token_day, 2)
-                            date = date[1].strftime("%d-%m-%Y")
-                            dates.append(date)
+               dates.append(temp) 
+        
+        if tok_key == 'nextweek':
+            temp = []
+            startdate = now - datetime.timedelta(days=now.weekday() - 7)
+            temp.append(startdate.strftime("%d-%m-%Y"))
+            for n in range(1,7):
+                day = (startdate + datetime.timedelta(days=(n))).strftime("%d-%m-%Y")
+                temp.append(day)
+            weekdays = ['mon','tue','wed','thu','fri','sat','sun']
+            prev_key = list(tokens[i - 1].keys())[0]
+            if prev_key in weekdays:
+                if prev_key == "mon":
+                    dates.append(temp[0])
+                elif prev_key == "tue":
+                    dates.append(temp[1])
+                elif prev_key == "wed":
+                    dates.append(temp[2])
+                elif prev_key == "thu":
+                    dates.append(temp[3])
+                elif prev_key == "fri":
+                    dates.append(temp[4])
+                elif prev_key == "sat":
+                    dates.append(temp[5])
+                elif prev_key == "sun":
+                    dates.append(temp[6])
+            else:
+               dates.append(temp) 
+                    
         if tok_key == 'allofnextweek':
             startdate = now + datetime.timedelta(days=-now.weekday(), weeks=1)
             dates.append(startdate.strftime("%d-%m-%Y"))
             for i in range(1,7):
                 day = (startdate + datetime.timedelta(days=(i))).strftime("%d-%m-%Y")
                 dates.append(day)
-        if tok_key == 'thisweek':
-            startdate = now - datetime.timedelta(days=now.weekday())
-            dates.append(startdate.strftime("%d-%m-%Y"))
-            for i in range(1,7):
-                day = (startdate + datetime.timedelta(days=(i))).strftime("%d-%m-%Y")
-                dates.append(day)
                 
-        if tok_key.startswith('month'):
+        if tok_key == 'thisweek':
+            temp = []
+            startdate = now - datetime.timedelta(days=now.weekday())
+            temp.append(startdate.strftime("%d-%m-%Y"))
+            for n in range(1,7):
+                day = (startdate + datetime.timedelta(days=(n))).strftime("%d-%m-%Y")
+                temp.append(day)
+            weekdays = ['mon','tue','wed','thu','fri','sat','sun']
+            prev_key = list(tokens[i - 1].keys())[0]
+            if prev_key in weekdays:
+                if prev_key == "mon":
+                    dates.append(temp[0])
+                elif prev_key == "tue":
+                    dates.append(temp[1])
+                elif prev_key == "wed":
+                    dates.append(temp[2])
+                elif prev_key == "thu":
+                    dates.append(temp[3])
+                elif prev_key == "fri":
+                    dates.append(temp[4])
+                elif prev_key == "sat":
+                    dates.append(temp[5])
+                elif prev_key == "sun":
+                    dates.append(temp[6])
+            else:
+               dates.append(temp)
+                
+        if tok_key.startswith('month') and list(tokens[i - 1].keys())[0] not in ["end", "start"]:
             day_key = list(tokens[i - 1].keys())[0]
-            day_val = list(tokens[i - 1].values())[0]
-            if day_key != "day":
+            if day_key != "day" and list(tokens[i - 1].keys())[0] not in ["end", "start"]:
                 month = int(tok_key.split("month")[1])
                 year_key = list(tokens[i + 1].keys())[0]
                 year_val = list(tokens[i + 1].values())[0]
@@ -276,9 +359,8 @@ def get_date(tokens,timezone,dates = []):
                 for day in days:
                     day = day.strftime("%d-%m-%Y")
                     dates.append(day)
-            else:
-                continue
-        if tok_key == 'thismonth':
+            
+        if tok_key == 'thismonth' and list(tokens[i - 1].keys())[0] not in ["end", "start"]:
             month = now.month
             year = now.year
             num_days = calendar.monthrange(year, month)[1]
@@ -287,7 +369,7 @@ def get_date(tokens,timezone,dates = []):
                 day = day.strftime("%d-%m-%Y")
                 dates.append(day)
                 
-        if tok_key == 'nextmonth':
+        if tok_key == 'nextmonth' and list(tokens[i - 1].keys())[0] not in ["end", "start"]:
             day_key = list(tokens[i - 1].keys())[0]
             day_val = list(tokens[i - 1].values())[0]
             if day_key != "day":
@@ -301,7 +383,7 @@ def get_date(tokens,timezone,dates = []):
                 for day in days:
                     day = day.strftime("%d-%m-%Y")
                     dates.append(day)
-        if tok_key == 'lastmonth':
+        if tok_key == 'lastmonth' and list(tokens[i - 1].keys())[0] not in ["end", "start"]:
             day_key = list(tokens[i - 1].keys())[0]
             day_val = list(tokens[i - 1].values())[0]
             if day_key != "day":
@@ -316,56 +398,57 @@ def get_date(tokens,timezone,dates = []):
                     day = day.strftime("%d-%m-%Y")
                     dates.append(day)
         if tok_key == 'year':
-            month_key = list(tokens[i - 1].keys())[0]
-            month_val = list(tokens[i - 1].values())[0]
-            if month_key.startswith("month"):
-                continue
-            else:
+            if i == 0:
                 year = tok_value
-                dates.append("01-01-" + year)
-        
+                dates.append("00-00-" + year)
+            else:
+                month_key = list(tokens[i - 1].keys())[0]
+                month_val = list(tokens[i - 1].values())[0]
+                if month_key.startswith("month") == False and month_key not in ["end", "start"]:
+                    year = tok_value
+                    dates.append("00-00-" + year)
+                    
         if tok_key == 'nextyear':
             month_key = list(tokens[i - 1].keys())[0]
-            month_val = list(tokens[i - 1].values())[0]
-            if month_key.startswith("month"):
-                continue
-            else:
+            if month_key.startswith("month") == False and month_key not in ["end", "start"]:
                 year = str(now.year + 1)
-                dates.append("01-01-" + year)
+                dates.append("00-00-" + year)
                 
         if tok_key == 'lastyear':
             month_key = list(tokens[i - 1].keys())[0]
-            month_val = list(tokens[i - 1].values())[0]
-            if month_key.startswith("month"):
-                continue
-            else:
+            if month_key.startswith("month") == False and month_key not in ["end", "start"]:
                 year = str(now.year - 1)
-                dates.append("01-01-" + year)
+                dates.append("00-00-" + year)
+            
+        if tok_key == 'thisyear':
+            month_key = list(tokens[i - 1].keys())[0]
+            if month_key.startswith("month") == False and month_key not in ["end", "start"]:
+                year = str(now.year)
+                dates.append("00-00-" + year)
                 
         if tok_key == 'day':
             day = tok_value
-            
+            print('day')
             if i + 1 >= len(tokens):
                 dates.append(day + "-" + str(now.month) + "-" + str(now.year))
-                continue
             else:
-                month_key = list(tokens[i + 1].keys())[0]
-                month_val = list(tokens[i + 1].values())[0]
-                if month_key.startswith("month"):
-                    month = month_key.split("month")[1]
+                next_key = list(tokens[i + 1].keys())[0]
+                if next_key.startswith("month"):
+                    month = next_key.split("month")[1]
                     if month.isnumeric():
                         month = month
                     else:
                         if month in number_str.keys():
                             month = str(number_str[month])
                         else:
-                            month = 0
-                elif month_key == "nextmonth":
+                            month = "0"
+                elif next_key == "nextmonth":
                     month = str(now.month + 1)
-                elif month_key == "lastmonth":
+                elif next_key == "lastmonth":
                     month = str(now.month - 1)
                 else:
-                    continue 
+                    month = str(now.month)
+                    
                 if (i + 2) >= len(tokens):
                     year = str(now.year)
                 else:
@@ -389,44 +472,148 @@ def get_date(tokens,timezone,dates = []):
                 day = day.strftime("%d-%m-%Y")
                 if day not in dates:
                     dates.append(day)
-   
+                    
+        if tok_key == "end":
+            next_key = list(tokens[i + 1].keys())[0]
+            next_val = list(tokens[i + 1].values())[0]
+            if next_key == "year":
+                dates.append("31-12-" + next_val)
+            elif next_key == "thisyear":
+                dates.append("31-12-" + str(now.year))
+            elif next_key == "nextyear":
+                dates.append("31-12-" + str(now.year + 1))
+            elif next_key == "lastyear":
+                dates.append("31-12-" + str(now.year - 1))
+            elif next_key == "thismonth":
+                day = calendar.monthrange(now.year, now.month)[1]
+                i += 1
+                dates.append(str(day) +"-"+ str(now.month) +"-"+ str(now.year))
+            elif next_key == "lastmonth":
+                month = now.month
+                if month == 1:
+                    month = 12
+                    day = calendar.monthrange(now.year - 1, month)[1]
+                    i += 1
+                    dates.append(str(day) +"-"+ str(month) +"-"+ str(now.year - 1))
+                else:
+                    day = calendar.monthrange(now.year, month - 1)[1]
+                    i += 1
+                    dates.append(str(day) +"-"+ str(month - 1) +"-"+ str(now.year))
+            elif next_key == "nextmonth":
+                month = now.month
+                if month == 12:
+                    month = 1
+                    day = calendar.monthrange(now.year + 1, month)[1]
+                    i += 1
+                    dates.append(str(day) +"-"+ str(month) +"-"+ str(now.year + 1))
+                else:
+                    day = calendar.monthrange(now.year, month + 1)[1]
+                    i += 1
+                    dates.append(str(day) +"-"+ str(month + 1) +"-"+ str(now.year))
+            elif next_key.startswith("month"):
+                month = next_key.split("month")[1]
+                if len(tokens) > 2:
+                    year_key = list(tokens[i + 2].keys())[0]
+                    year_val = list(tokens[i + 2].values())[0]
+                    if year_key == "year":
+                        day = calendar.monthrange(int(year_val), int(month))[1]
+                        i += 1
+                        dates.append(str(day) +"-"+ month +"-"+ str(year_val))
+                        
+                    elif year_key == "nextyear":
+                        day = calendar.monthrange(int(now.year + 1), int(month))[1]
+                        i+=1
+                        dates.append(str(day) +"-"+ month +"-"+ str(now.year + 1))
+                        
+                    elif year_key == "lastyear":
+                        day = calendar.monthrange(int(now.year - 1), int(month))[1]
+                        i+=1
+                        dates.append(str(day) +"-"+ month +"-"+ str(now.year - 1))
+                        
+                    elif year_key == "thisyear":
+                        day = calendar.monthrange(now.year, int(month))[1]
+                        i+=1
+                        dates.append(str(day) +"-"+ month +"-"+ str(now.year))
+                        
+                    else:
+                        day = calendar.monthrange(now.year, int(month))[1]
+                        dates.append(str(day) +"-"+ month +"-"+ str(now.year))
+                else:
+                    day = calendar.monthrange(now.year, int(month))[1]
+                    dates.append(str(day) +"-"+ month +"-"+ str(now.year))
+        if tok_key == 'start':
+            next_key = list(tokens[i + 1].keys())[0]
+            next_val = list(tokens[i + 1].values())[0]
+            if next_key == "year":
+                dates.append("01-01-" + next_val)
+            elif next_key == "thisyear":
+                dates.append("01-01-" + str(now.year))
+            elif next_key == "nextyear":
+                dates.append("01-01-" + str(now.year + 1))
+            elif next_key == "lastyear":
+                dates.append("01-01-" + str(now.year - 1))
+            elif next_key == "thismonth":
+                dates.append("01-" + str(now.month) + "-" + str(now.year))
+            elif next_key == "lastmonth":
+                if now.month == 1:
+                    dates.append("01-12" + "-" + str(now.year - 1))
+                else:
+                    dates.append("01-" + str(now.month - 1) + "-" + str(now.year))
+            elif next_key == "nextmonth":
+                if now.month == 12:
+                    dates.append("01-01" + "-" + str(now.year + 1))
+                else:
+                    dates.append("01-" + str(now.month + 1) + "-" + str(now.year))
+            elif next_key.startswith("month"):
+                month = next_key.split("month")[1]
+                if len(tokens) > 2:
+                    year_key = list(tokens[i + 2].keys())[0]
+                    year_val = list(tokens[i + 2].values())[0]
+                    if year_key == "year":
+                        i += 1
+                        dates.append("01-"+ month +"-"+ str(year_val))
+                        
+                    elif year_key == "nextyear":
+                        i+=1
+                        dates.append("01-"+ month +"-"+ str(now.year + 1))
+                        
+                    elif year_key == "lastyear":
+                        i+=1
+                        dates.append("01-"+ month +"-"+ str(now.year - 1))
+                        
+                    elif year_key == "thisyear":
+                        i+=1
+                        dates.append("01-"+ month +"-"+ str(now.year))
+                        
+                    else:
+                        dates.append("01-"+ month +"-"+ str(now.year))
+                else:
+                    dates.append("01-"+ month +"-"+ str(now.year))
+        i = i + 1      
     return dates
 
 def check_list(list):
     dates  = []
+    temp = []
     for x in list:
         if x not in dates:
             dates.append(x)
+    for d in dates:
+        if d.startswith("00-00"):
+            temp.append(d)
+            dates.pop(dates.index(d))
     dates_sort = [datetime.datetime.strptime(x,'%d-%m-%Y') for x in dates]
     dates = [x.strftime('%d-%m-%Y') for x in dates_sort]
-    return dates
-def get_change_token(msg):
-    tokens = tokenize_2(msg,"data/change.json")
-    change = []
-    for token in tokens:
-        tok_key = list(token.keys())[0]
-        change.append(tok_key)
-    return change
-def summary_date(msg):
-    
+    result = dates + temp
+    return result
+
+def date_extractor(msg):
     dates = regex_date(msg)
     tokens = tokenize(msg)
     dates += get_date(tokens,'Asia/Ho_Chi_Minh',dates)
     dates = check_list(dates)
     return dates
-t = time.time()
-for i in range(0, 1000000):
-    print(i)
-    print(summary_date('20-03-2022 đến ngày 28/03-2022'))
-print(time.time() - t)
-#print(summary_date('ngày 5 tháng ba đến ngày 10 tháng ba'))
-#print(summary_date('02/02/2013 đi đến ngày 2 tháng 3 ngày mùng một tháng chạp năm 2022 và ngày rằm tháng năm năm 2022 và ngày hai mươi chín tháng 5 năm 2022'))
-#print(summary_date('hôm nay và ngày mai'))
-#print(summary_date('ngày 20 tháng 3 năm 2022 đến ngày 28 tháng 3 năm 2022'))
-#print(summary_date('tháng ba năm sau'))
-#print(summary_date('ngày ba mươi mốt tháng năm năm sau tôi đi chơi ngày 22 tháng 11 năm nay'))
-#print(summary_date('ngày tôi đi chới 23 tháng ba năm sau'))
-#print(summary_date('ngày hai mươi đến ngày 23 tháng 6'))
 
-#print(summary_date("thứ 2 tuần sau và thứ 3 tuần sau"))
-#print(summary_date('20/02|2020 19:02:2002'))
+msg = input("msg : ")
+
+print(date_extractor(msg))

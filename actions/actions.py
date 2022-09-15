@@ -1,34 +1,22 @@
 """Custom actions"""
-import os
-from typing import Dict, Text, Any, List
 import logging
-from dateutil import parser
+import os
+from typing import Any, Dict, List, Text
+
 import sqlalchemy as sa
-
-from rasa_sdk.interfaces import Action
-from rasa_sdk.events import (
-    SlotSet,
-    EventType,
-    ActionExecuted,
-    SessionStarted,
-    Restarted,
-    FollowupAction,
-    UserUtteranceReverted,
-)
+from dateutil import parser
 from rasa_sdk import Tracker
+from rasa_sdk.events import (ActionExecuted, EventType, FollowupAction,
+                             Restarted, SessionStarted, SlotSet,
+                             UserUtteranceReverted)
 from rasa_sdk.executor import CollectingDispatcher
-
-from actions.parsing import (
-    parse_duckling_time_as_interval,
-    parse_duckling_time,
-    get_entity_details,
-    parse_duckling_currency,
-)
-
-from actions.profile_db import create_database, ProfileDB
+from rasa_sdk.interfaces import Action
 
 from actions.custom_forms import CustomFormValidationAction
-
+from actions.parsing import (get_entity_details, parse_duckling_currency,
+                             parse_duckling_time,
+                             parse_duckling_time_as_interval)
+from actions.profile_db import ProfileDB, create_database
 
 logger = logging.getLogger(__name__)
 

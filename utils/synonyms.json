@@ -30,7 +30,9 @@
     "ngày trước": "daysago",
     "ngày tới": "nextday",
     "tuần tới": "nextweek",
+    "của tuần tới": "nextweek",
     "tuần sau": "nextweek",
+    "của tuần sau": "nextweek",
     "cả tuần sau": "allofnextweek",
     "tuần rồi": "lastweek",
     "tuần này": "thisweek",
@@ -77,14 +79,17 @@
     "trong vòng": "fromto",
     "trong khoảng": "between",
     "đến": "between",
+    "cuối": "end",
+    "đầu": "start",
     "năm sau": "nextyear",
     "năm tới": "nextyear",
     "năm tiếp theo": "nextyear",
     "năm trước": "lastyear",
+    "năm ngoái": "lastyear",
     "năm vừa rồi": "lastyear",
     "năm vừa qua": "lastyear",
     "năm nay": "thisyear",
     "năm": "year",
     "ngày": "day"
-    }
+}
   

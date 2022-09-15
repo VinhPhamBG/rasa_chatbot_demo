@@ -1,11 +1,16 @@
 import datetime
 import pytz
-# year = 2022
-# month = 0
-# day = 0
-# if month :
-# print(datetime.datetime(year=year,month=month,day=day))
-#a = [{'day': '11'}, {'month5': 'tháng năm'}, {'year': '2022'}, {'day': '10'}, {'month5': 'tháng năm'}, {'year': '2022'}]
-a = ["a", "b"]
-a.insert(0, "1")
-print(len(a[0]))
+from price_parser import Price
+from vi_nlp_core.ner.extractor import Extractor
+extractor = Extractor()
+# timezone="Asia/Ho_Chi_Minh"
+# tz = pytz.timezone(timezone)
+# now = datetime.datetime.now(tz=tz)
+text = "tôi sinh vào ngày 21 tháng 3 năm 1997 bạn tôi sinh ngày 19 tháng 11 năm 2021"
+
+
+# msg = input("Please enter: ")
+# price = Price.fromstring(msg)
+date = extractor.extract_date(text)
+print(date.values())
+#pip install lexnlp
